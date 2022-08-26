@@ -25,14 +25,6 @@
 
     <script async src="https://unpkg.com/es-module-shims@1.3.6/dist/es-module-shims.js"></script>
 
-    <!-- <script type="importmap">
-    {
-        "imports": {
-            "three": "../_libs/three.js"
-        }
-    }
-    </script> -->
-
     <script type="module">
 
         import * as THREE from 'three';
@@ -41,7 +33,6 @@
         let renderer, scene, camera;
 
         function init() {
-            console.log( window.location.host );
             const container = document.getElementById( 'container' );
 
             scene = new THREE.Scene();
