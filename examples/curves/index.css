@@ -50,3 +50,9 @@
   #root, #__next {
     isolation: isolate;
   }
+
+  .cmd-info {
+    position: absolute;
+    top: 1rem;
+    left: 2rem;
+  }
