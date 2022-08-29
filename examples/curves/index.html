@@ -36,7 +36,7 @@
         
         const emitter = createNanoEvents();
 
-        let renderer, scene, camera, controls, raycaster;
+        let renderer, scene, camera, controls, raycaster, intersectionMarker;
         const group = new THREE.Group();
         const pointer = new THREE.Vector2();
 
@@ -59,6 +59,10 @@
 			const gridHelper = new THREE.GridHelper( 1000, 20 );
 			scene.add( gridHelper );
 
+            // intersection
+            intersectionMarker = createIntersectionMarker( scene );
+
+            // nurbs
 		    group.position.y = 0;
             scene.add(group);
 
@@ -169,12 +173,37 @@
 
             if ( intersects.length > 0 ) {
                 console.log( "intersects" );
+                intersectionMarker.showAt( intersects[0].point );
+                render();
+            } else {
+                intersectionMarker.hide();
+                render();
             }
         }
 
         function createCmd( name = "" ) {
             return {
                 name
+            };
+        }
+
+        function createIntersectionMarker( scene ) {
+            const geometry = new THREE.SphereGeometry( 5 );
+            const material = new THREE.MeshBasicMaterial( { color: 0xff0000 } );
+
+            const sphereInter = new THREE.Mesh( geometry, material );
+            sphereInter.visible = false;
+            scene.add( sphereInter );
+
+            return {
+                showAt( point ) {
+                    sphereInter.visible = true;
+					sphereInter.position.copy( point );
+                },
+
+                hide() {
+                    sphereInter.visible = false;
+                }
             };
         }
 
