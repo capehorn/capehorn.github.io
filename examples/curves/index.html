@@ -129,7 +129,7 @@
             const nurbsMaterial = new THREE.LineBasicMaterial( { color: 0x333333 } );
 
             const nurbsLine = new THREE.Line( nurbsGeometry, nurbsMaterial );
-            nurbsLine.position.set( 200, - 100, 0 );
+            nurbsLine.position.set( 0, 0, 0 );
             group.add( nurbsLine );
 
             const nurbsControlPointsGeometry = new THREE.BufferGeometry();
@@ -173,7 +173,11 @@
 
             if ( intersects.length > 0 ) {
                 console.log( "intersects" );
-                intersectionMarker.showAt( intersects[0].point );
+                const selectionTarget = intersects[ 0 ];
+                intersectionMarker.showAt( selectionTarget.point );
+                const material = selectionTarget.object.material;
+                material.color.setHex( 0x00ffff );
+                material.needsUpdate = true;
                 render();
             } else {
                 intersectionMarker.hide();
