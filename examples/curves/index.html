@@ -29,6 +29,7 @@
 
         import * as THREE from 'three';
         import { OrbitControls } from 'https://unpkg.com/three/examples/jsm/controls/OrbitControls.js';
+        import { TransformControls } from 'https://unpkg.com/three/examples/jsm/controls/TransformControls.js';
         import { NURBSCurve } from 'https://unpkg.com/three/examples/jsm/curves/NURBSCurve.js';
 
         import { createNanoEvents } from 'https://cdn.jsdelivr.net/gh/capehorn/domtonjs/index.js';
@@ -36,7 +37,7 @@
         
         const emitter = createNanoEvents();
 
-        let renderer, scene, camera, controls, raycaster, intersectionMarker;
+        let renderer, scene, camera, orbitCtrl, trfCtrl, raycaster, intersectionMarker;
         const group = new THREE.Group();
         const pointer = new THREE.Vector2();
 
@@ -74,14 +75,22 @@
             renderer.shadowMap.enabled = true;
             container.appendChild( renderer.domElement );
 
-            // Controls
-            controls = new OrbitControls( camera, renderer.domElement );
-            controls.damping = 0.2;
-            controls.addEventListener( 'change', render );
+            // Orbit Controls
+            orbitCtrl = new OrbitControls( camera, renderer.domElement );
+            orbitCtrl.damping = 0.2;
+            orbitCtrl.addEventListener( 'change', render );
+
+            // Transform Controls
+            trfCtrl = new TransformControls( camera, renderer.domElement );
+            trfCtrl.addEventListener( 'change', render );
+            trfCtrl.addEventListener( 'dragging-changed', function ( event ) {
+                orbitCtrl.enabled = ! event.value;
+            } );
 
             // Event listeners
             document.addEventListener( 'keydown', onDocumentKeyDown );
-            document.addEventListener( 'pointermove', onPointerMove );
+            //document.addEventListener( 'pointermove', onPointerMove );
+            document.addEventListener( 'pointerdown', onPointerDown );
             window.addEventListener( 'resize', onWindowResize );
 
             // Raycaster
@@ -135,7 +144,7 @@
             const nurbsControlPointsGeometry = new THREE.BufferGeometry();
             nurbsControlPointsGeometry.setFromPoints( nurbsCurve.controlPoints );
 
-            const nurbsControlPointsMaterial = new THREE.LineBasicMaterial( { color: 0x333333, opacity: 0.25, transparent: true } );
+            const nurbsControlPointsMaterial = new THREE.LineBasicMaterial( { color: 0x3333ff, opacity: 0.35, transparent: true } );
 
             const nurbsControlPointsLine = new THREE.Line( nurbsControlPointsGeometry, nurbsControlPointsMaterial );
             nurbsControlPointsLine.position.copy( nurbsLine.position );
@@ -158,13 +167,13 @@
             if ( key === "`" ) {
                 const cmd = createCmd( "recenter" );
                 emitter.emit( "uiCmdInfo.showCmd", cmd );
-                controls.target = new THREE.Vector3( 0, 0, 0 );
-                controls.update();
+                orbitCtrl.target = new THREE.Vector3( 0, 0, 0 );
+                orbitCtrl.update();
                 render();
             }
         }
 
-        function onPointerMove( event ) {
+        function onPointerDown( event ) {
             pointer.x = ( event.clientX / window.innerWidth ) * 2 - 1;
             pointer.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
 
@@ -172,12 +181,17 @@
             const intersects = raycaster.intersectObjects( group.children, true );
 
             if ( intersects.length > 0 ) {
-                console.log( "intersects" );
+                // console.log( "intersects" );
                 const selectionTarget = intersects[ 0 ];
                 intersectionMarker.showAt( selectionTarget.point );
                 const material = selectionTarget.object.material;
-                material.color.setHex( 0x00ffff );
+                material.color.setHex( 0xff0000 );
                 material.needsUpdate = true;
+
+                trfCtrl.attach( selectionTarget.object );
+                trfCtrl.setMode( 'translate' );
+                scene.add( trfCtrl );
+
                 render();
             } else {
                 intersectionMarker.hide();
