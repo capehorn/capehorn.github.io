@@ -82,7 +82,7 @@
 
             // Transform Controls
             trfCtrl = new TransformControls( camera, renderer.domElement );
-            trfCtrl.addEventListener( 'change', render );
+            trfCtrl.addEventListener( 'change', render);
             trfCtrl.addEventListener( 'dragging-changed', function ( event ) {
                 orbitCtrl.enabled = ! event.value;
             } );
@@ -139,7 +139,7 @@
 
             const nurbsLine = new THREE.Line( nurbsGeometry, nurbsMaterial );
             nurbsLine.position.set( 0, 0, 0 );
-            group.add( nurbsLine );
+            //group.add( nurbsLine );
 
             const nurbsControlPointsGeometry = new THREE.BufferGeometry();
             nurbsControlPointsGeometry.setFromPoints( nurbsCurve.controlPoints );
@@ -148,6 +148,14 @@
 
             const nurbsControlPointsLine = new THREE.Line( nurbsControlPointsGeometry, nurbsControlPointsMaterial );
             nurbsControlPointsLine.position.copy( nurbsLine.position );
+
+            nurbsControlPointsLine.add( nurbsLine );
+
+            nurbsControlPointsLine.userData = { nurbsCurve: nurbsCurve };
+            // nurbsControlPointsLine.onBeforeRender = ( renderer, scene, camera, geometry, material, group ) => {
+            //     console.log( "render" );
+            // }
+
             group.add( nurbsControlPointsLine );
         }
 
@@ -164,6 +172,23 @@
 
         function onDocumentKeyDown( event ) {
             const key = event.key;
+            
+            if ( key === "Escape" ) {
+                trfCtrl.detach();
+            }
+
+            if ( key === "r" && trfCtrl.enabled ) {
+                trfCtrl.setMode( 'rotate' );
+            }
+
+            if ( key === "s" && trfCtrl.enabled ) {
+                trfCtrl.setMode( 'scale' );
+            }
+
+            if ( key === "t" && trfCtrl.enabled ) {
+                trfCtrl.setMode( 'translate' );
+            }
+            
             if ( key === "`" ) {
                 const cmd = createCmd( "recenter" );
                 emitter.emit( "uiCmdInfo.showCmd", cmd );
@@ -191,6 +216,11 @@
                 trfCtrl.attach( selectionTarget.object );
                 trfCtrl.setMode( 'translate' );
                 scene.add( trfCtrl );
+
+                const userData = selectionTarget.object.userData;
+                if ( userData && userData.nurbsCurve ) {
+                    console.log( userData.nurbsCurve.toJSON() );
+                }
 
                 render();
             } else {
