@@ -9,7 +9,12 @@
 
         const importMap = {
             "imports": {
-                "three": DEV_ENV ? "../_libs/three.js" : "https://unpkg.com/three/build/three.module.js"
+                "three": DEV_ENV ? "../_libs/three.js" : "https://unpkg.com/three/build/three.module.js",
+                "orbitControls": DEV_ENV ? "../_libs/jsm/controls/OrbitControls.js" : "https://unpkg.com/three/examples/jsm/controls/OrbitControls.js",
+                "transformControls": DEV_ENV ? "../_libs/jsm/controls/TransformControls.js" : "https://unpkg.com/three/examples/jsm/controls/TransformControls.js",
+                "nurbsCurve": DEV_ENV ? "../_libs/jsm/curves/NURBSCurve.js" : "https://unpkg.com/three/examples/jsm/curves/NURBSCurve.js",
+                "nurbsSurface": DEV_ENV ? "../_libs/jsm/curves/NURBSSurface.js" : "https://unpkg.com/three/examples/jsm/curves/NURBSSurface.js",
+                "parametricGeometry": DEV_ENV ? "../_libs/jsm/geometries/ParametricGeometry.js" : "https://unpkg.com/three/examples/jsm/geometries/ParametricGeometry.js",
             }
         };
 
@@ -28,9 +33,11 @@
     <script type="module">
 
         import * as THREE from 'three';
-        import { OrbitControls } from 'https://unpkg.com/three/examples/jsm/controls/OrbitControls.js';
-        import { TransformControls } from 'https://unpkg.com/three/examples/jsm/controls/TransformControls.js';
-        import { NURBSCurve } from 'https://unpkg.com/three/examples/jsm/curves/NURBSCurve.js';
+        import { OrbitControls } from 'orbitControls';
+        import { TransformControls } from 'transformControls';
+        import { NURBSCurve } from 'nurbsCurve';
+        import { NURBSSurface } from 'nurbsSurface';
+		import { ParametricGeometry } from 'parametricGeometry';
 
         import { createNanoEvents } from 'https://cdn.jsdelivr.net/gh/capehorn/domtonjs/index.js';
         import { UICmdInfo } from './ui-cmd-info.js';
@@ -47,6 +54,12 @@
 
             scene = new THREE.Scene();
             scene.background = new THREE.Color( 0xf0f0f0 );
+
+            scene.add( new THREE.AmbientLight( 0x808080 ) );
+
+            const light = new THREE.DirectionalLight( 0xffffff, 1 );
+            light.position.set( 1, 1, 1 );
+            scene.add( light );
 
             camera = new THREE.PerspectiveCamera( 70, window.innerWidth / window.innerHeight, 1, 10000 );
             camera.position.set( 0, 250, 500 );
@@ -67,7 +80,8 @@
 		    group.position.y = 0;
             scene.add(group);
 
-            nurbs(group);
+            //nurbs(group);
+            nurbsSurface( group );
 
             renderer = new THREE.WebGLRenderer( { antialias: true } );
             renderer.setPixelRatio( window.devicePixelRatio );
@@ -159,6 +173,58 @@
             group.add( nurbsControlPointsLine );
         }
 
+        function nurbsSurface( group ) {
+
+            const nsControlPoints = [
+                [
+                    new THREE.Vector4( 0, 0, 0, 1 ),
+                    new THREE.Vector4( 0, 100, 0, 1 ),
+                    //new THREE.Vector4( 100, 0, 100, 1 ),
+                    //new THREE.Vector4( 0, 0, 100, 1 ),
+                    //new THREE.Vector4( 100, 0, 100, 1 ),
+                    //new THREE.Vector4( 0, 100, 0, 1 )
+                ],
+                [
+                    new THREE.Vector4( 100, 0, 0, 1 ),
+                    new THREE.Vector4( 100, 100, 0, 1 ),
+                ],
+                [
+                    new THREE.Vector4( 140, 0, 100, 1 ),
+                    new THREE.Vector4( 140, 200, 100, 1 ),
+                ],
+                [
+                    new THREE.Vector4( 100, 0, 200, 1 ),
+                    new THREE.Vector4( 100, 100, 200, 1 ),
+                ],
+                [
+                    new THREE.Vector4( 0, 0, 200, 1 ),
+                    new THREE.Vector4( 0, 100, 200, 1 ),
+                ],
+            ];
+            const degree1 = 4;
+            const degree2 = 1;
+            const knots1 = [ 0, 0, 0, 0, 0, 1, 1, 1, 1, 1];
+            const knots2 = [ 0, 0, 1, 1];
+            const nurbsSurface = new NURBSSurface( degree1, degree2, knots1, knots2, nsControlPoints );
+
+            const map = new THREE.TextureLoader().load( './uv_grid_opengl.jpg' );
+            map.wrapS = map.wrapT = THREE.RepeatWrapping;
+            map.anisotropy = 16;
+
+            function getSurfacePoint( u, v, target ) {
+
+                return nurbsSurface.getPoint( u, v, target );
+
+            }
+
+            const geometry = new ParametricGeometry( getSurfacePoint, 20, 20 );
+            const material = new THREE.MeshLambertMaterial( { map: map, side: THREE.DoubleSide } );
+            const object = new THREE.Mesh( geometry, material );
+            object.position.set( 0, 0, 0 );
+            object.scale.multiplyScalar( 1 );
+            group.add( object );
+        }
+
         function render() {
             renderer.render( scene, camera );
         }
@@ -174,8 +240,14 @@
             const key = event.key;
             
             if ( key === "Escape" ) {
-                trfCtrl.detach();
+                if ( trfCtrl.enabled ) {
+                    trfCtrl.detach();
+                    render();
+                }
+                
             }
+
+            // Change transform mode
 
             if ( key === "r" && trfCtrl.enabled ) {
                 trfCtrl.setMode( 'rotate' );
@@ -189,6 +261,8 @@
                 trfCtrl.setMode( 'translate' );
             }
             
+            // Recenter
+
             if ( key === "`" ) {
                 const cmd = createCmd( "recenter" );
                 emitter.emit( "uiCmdInfo.showCmd", cmd );
@@ -196,6 +270,33 @@
                 orbitCtrl.update();
                 render();
             }
+
+            // Switch camera
+            // if ( key === "o" ) {
+            //     camera = new THREE.OrthographicCamera( 70, window.innerWidth / window.innerHeight, 1, 10000 );
+            //     orbitCtrl.update();
+            //     render();
+            // }
+
+            // Views
+
+            // if ( key === "1" ) {
+            //     orbitCtrl.target = new THREE.Vector3( 0, 0, 0 );
+            //     orbitCtrl.update();
+            //     render();
+            // }
+
+            // if ( key === "2" ) {
+            //     orbitCtrl.target = new THREE.Vector3( 0, 0, 0 );
+            //     orbitCtrl.update();
+            //     render();
+            // }
+
+            // if ( key === "3" ) {
+            //     orbitCtrl.target = new THREE.Vector3( 0, 0, 0 );
+            //     orbitCtrl.update();
+            //     render();
+            // }
         }
 
         function onPointerDown( event ) {
